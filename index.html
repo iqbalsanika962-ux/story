@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Bary-G Love's Story</title>
+<style>
+  :root{
+    --bg-1:#0b0710;
+    --card:#f6f1ff;
+    --accent:#8a63ff;
+    --accent-2:#ff6ad5;
+    --muted:#7b6f8a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+  html,body{height:100%;background:linear-gradient(180deg,#0b0710 0%, #150f26 100%);color:#fff;overflow:hidden}
+
+  /* ---- Loading (3s) ---- */
+  #loading {
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#eae4ff, #d9cffb);z-index:9999;
+    transition:opacity .8s ease .2s,visibility .8s .2s;
+  }
+  #loading.hidden{opacity:0;visibility:hidden}
+  .loader {
+    width:96px;height:96px;border-radius:50%;border:10px solid rgba(138,99,255,0.28);
+    border-top-color:var(--accent); animation:spin 1.2s linear infinite;
+    box-shadow:0 10px 30px rgba(138,99,255,0.12);
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---- Page container (each full screen) ---- */
+  .page {
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    transition:opacity .7s ease, transform .7s cubic-bezier(.2,.9,.25,1);
+    padding:28px;
+  }
+  .page.active{display:flex;opacity:1;transform:translateY(0)}
+  .page.hidden{opacity:0;transform:translateY(10px)}
+  
+  /* ---- Landing / Welcome (fullscreen hero) ---- */
+  #landing{
+    background:url('bg-blur.jpg') center/cover no-repeat;
+  }
+  #landing::after{
+    content:'';position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,7,16,0.35), rgba(8,6,18,0.6));backdrop-filter:blur(6px);
+  }
+  .hero {
+    position:relative;z-index:2;text-align:center;color:white;
+    animation:fadeUp .9s ease both;
+  }
+  .title {
+    font-size:48px;font-weight:800;letter-spacing:.6px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;color:transparent;
+    text-shadow: 0 6px 30px rgba(138,99,255,0.18);
+  }
+  .sub {
+    margin-top:10px;color:rgba(255,255,255,0.88);font-weight:600;font-size:16px;
+  }
+  .start {
+    margin-top:28px;padding:14px 28px;border-radius:14px;border:none;font-weight:700;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    color:#fff;font-size:18px;cursor:pointer;box-shadow:0 12px 40px rgba(138,99,255,0.16);
+    position:relative;overflow:hidden;
+  }
+  .start:hover{transform:translateY(-3px)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+
+  /* ---- Story layout: left media, right text ---- */
+  .story {
+    width:100%;height:100%;display:flex;gap:30px;align-items:center;justify-content:center;
+    padding:40px;max-width:1200px;margin:auto;
+  }
+  .media {
+    flex:1;height:78vh;border-radius:18px;overflow:hidden;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.04);box-shadow:0 20px 60px rgba(8,6,20,0.6);
+    cursor:zoom-in;
+  }
+  .media img, .media video{width:100%;height:100%;object-fit:cover;transition:transform .6s ease}
+  /* Hover zoom-in (never shrink) */
+  .media:hover img, .media:hover video{transform:scale(1.15);}
+
+  .copy {
+    flex:1;padding:28px 36px;display:flex;flex-direction:column;justify-content:center;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;border:1px solid rgba(255,255,255,0.03)
+  }
+  .copy h2{font-size:28px;margin-bottom:14px;color:#f5f0ff}
+  .copy p{font-size:18px;line-height:1.7;color:#d9cfe6;margin-bottom:12px}
+  .poetry{font-family:'Noto Nastaliq Urdu', serif;font-size:18px;color:#e7dbff;text-align:right;direction:rtl;margin-top:16px}
+
+  /* nav controls */
+  .nav {
+    position:absolute;right:40px;bottom:40px;display:flex;gap:12px;z-index:20;
+  }
+  .btn {
+    padding:12px 18px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);
+    background:transparent;color:#fff;cursor:pointer;font-weight:700;
+  }
+  .btn.primary {
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;box-shadow:0 12px 40px rgba(138,99,255,0.12)
+  }
+  .btn:hover{transform:translateY(-4px)}
+  /* sprinkle hint on hover (small floating dots) */
+  .btn.primary:hover{box-shadow:0 18px 80px rgba(138,99,255,0.22)}
+  
+  /* sprinkle particle (created dynamically) */
+  .sprinkle {
+    position:fixed;width:8px;height:8px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle at 40% 30%, #fff, var(--accent));opacity:0.95;z-index:99999;
+    transform:translate(-50%,-50%);will-change:transform,opacity;
+  }
+
+  /* final screen uses welcome style */
+  .endWrap{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+  .endWrap h1{font-size:44px;background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;color:transparent}
+  .kiss{font-size:48px;margin-top:18px;animation:kissAnim 1.4s ease-in-out infinite}
+  @keyframes kissAnim{0%{transform:scale(1)}50%{transform:scale(1.35)}100%{transform:scale(1)}}
+
+  /* memory box */
+  .memoryBox {
+    margin-top:26px;width:320px;height:220px;border-radius:18px;border:3px dashed rgba(138,99,255,0.28);
+    display:flex;align-items:center;justify-content:center;color:#f3eaff;background:linear-gradient(180deg, rgba(138,99,255,0.06), rgba(255,255,255,0.01));cursor:pointer;
+  }
+  .memoryBox:hover{transform:scale(1.03)}
+
+  /* viewer overlay */
+  #viewer {
+    position:fixed;inset:0;display:none;background:rgba(7,6,12,0.88);align-items:center;justify-content:center;flex-direction:column;z-index:99999;padding:28px;
+  }
+  #viewer img{max-width:90%;max-height:78vh;border-radius:14px;box-shadow:0 30px 90px rgba(0,0,0,0.7)}
+  .viewerControls{display:flex;gap:12px;margin-top:18px}
+  .viewerControls button{padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;font-weight:700;cursor:pointer}
+
+  /* responsive */
+  @media (max-width:920px){
+    .story{flex-direction:column;padding:20px}
+    .media{height:50vh}
+    .nav{right:16px;bottom:16px}
+    .title{font-size:36px}
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading (3s) -->
+<div id="loading">
+  <div class="loader" aria-hidden="true"></div>
+</div>
+
+<!-- Landing page (uses same visual style as final) -->
+<section id="landing" class="page active" aria-label="Landing">
+  <div class="hero">
+    <div class="title">Bary-G Love's Story</div>
+    <div class="sub">A gift of memories — the sweetest journey 💜</div>
+    <button class="start" id="btnStart" aria-label="Start the story">Start</button>
+  </div>
+</section>
+
+<!-- Story screens (all are .page and will fade replace) -->
+<section id="s0" class="page" aria-hidden="true">
+  <div class="story">
+    <div class="media" id="m0"><img src="messenger.jpg" alt="Messenger screenshot"></div>
+    <div class="copy">
+      <h2>The Proposal</h2>
+      <p>14 April — the day I asked my Choti G to be mine. The best day of my life. ❤️</p>
+      <div class="poetry">وہ لمحہ جب آپ نے مسکرا کے ہاں کہا — زندگی روشن ہو گئی ✨</div>
+    </div>
+  </div>
+</section>
+
+<section id="s1" class="page" aria-hidden="true">
+  <div class="story">
+    <div class="media" id="m1"><img src="eid.jpg" alt="Eid picture"></div>
+    <div class="copy">
+      <h2>Our First Eid</h2>
+      <p>یہ پہلی عید تھی جب ہم ایک ساتھ تھے — دل کو سکون ملا۔</p>
+      <div class="poetry">عید کی وہ صبح، آپ کی مسکان نے دل جیت لیا 🌙</div>
+    </div>
+  </div>
+</section>
+
+<section id="s2" class="page" aria-hidden="true">
+  <div class="story">
+    <div class="media" id="m2"><img src="arslan.jpg" alt="Arslan's wedding"></div>
+    <div class="copy">
+      <h2>Arslan's Wedding</h2>
+      <p>The day we spoke alone for the first time and had our first cup of tea — romantic and unforgettable.</p>
+      <div class="poetry">وہ چائے کی پیالی، اور آپ کا قہقہہ — دل نے جانا محبت کیا ہے ☕️</div>
+    </div>
+  </div>
+</section>
+
+<section id="s3" class="page" aria-hidden="true">
+  <div class="story">
+    <div class="media" id="m3"><img src="parents.jpg" alt="Parents met"></div>
+    <div class="copy">
+      <h2>When Families Met</h2>
+      <p>Our parents met and spoke of our rishta — the moment everything felt real.</p>
+      <div class="poetry">جب خاندان ملے، دعاؤں نے ہمیں جوڑا — شروعات ہوئی ✨</div>
+    </div>
+  </div>
+</section>
+
+<section id="s4" class="page" aria-hidden="true">
+  <div class="story">
+    <div class="media" id="m4"><img src="fav.jpg" alt="Favourite picture"></div>
+    <div class="copy">
+      <h2>My Favourite Picture</h2>
+      <p>This picture always reminds me of the happiest moments with you.</p>
+      <div class="poetry">یہ تصویر، ہر بار دل کو گھیر لیتی ہے — یادیں تازہ کر دیتی ہے ❤️</div>
+    </div>
+  </div>
+</section>
+
+<section id="s5" class="page" aria-hidden="true">
+  <div class="story">
+    <div class="media" id="m5"><img src="prank.jpg" alt="Prank"></div>
+    <div class="copy">
+      <h2>The Prank</h2>
+      <p>I pretended I wouldn't come — but I was on my way to surprise you. 😄</p>
+      <div class="poetry">چھوٹی سی ہنسی، بڑا سا پیار — آپ کی خوشی میری دنیا تھی 💕</div>
+    </div>
+  </div>
+</section>
+
+<section id="s6" class="page" aria-hidden="true">
+  <div class="story">
+    <div class="media" id="m6"><video controls src="last_video.mp4" alt="Last memory"></video></div>
+    <div class="copy">
+      <h2>The Last Memory</h2>
+      <p>The last time we met — a memory I will always cherish and replay in my heart.</p>
+      <div class="poetry">وہ آخری ملاقات — دل کے دفتر میں لکھ دی گئی ہے ✨</div>
+    </div>
+  </div>
+</section>
+
+<!-- End screen looks like the welcome page -->
+<section id="end" class="page" aria-hidden="true">
+  <div class="endWrap">
+    <h1>Bary-G Love's Story</h1>
+    <div class="sub" style="color:rgba(138,99,255,0.9);margin-top:8px">A collection of our sweetest memories</div>
+    <div class="kiss" aria-hidden="true">💋</div>
+    <div class="memoryBox" id="openMemory">Open Memories 📸</div>
+    <div style="margin-top:18px">
+      <button class="start" id="btnRestart">Play Again</button>
+    </div>
+  </div>
+</section>
+
+<!-- Navigation buttons (always visible but handle disabled logic in JS) -->
+<div class="nav" role="navigation" aria-hidden="false">
+  <button class="btn" id="prevBtn" aria-label="Previous">Prev</button>
+  <button class="btn primary" id="nextBtn" aria-label="Next">Next</button>
+</div>
+
+<!-- Viewer overlay for memories -->
+<div id="viewer" aria-hidden="true">
+  <img id="viewerImg" src="" alt="Memory viewer">
+  <div class="viewerControls">
+    <button id="vPrev">Prev</button>
+    <button id="vNext">Next</button>
+    <button id="vClose">Close</button>
+  </div>
+</div>
+
+<script>
+/* ---------- Basic state ---------- */
+const pages = Array.from(document.querySelectorAll('.page'));
+const landing = document.getElementById('landing');
+const nextBtn = document.getElementById('nextBtn');
+const prevBtn = document.getElementById('prevBtn');
+const btnStart = document.getElementById('btnStart');
+const btnRestart = document.getElementById('btnRestart');
+const endPage = document.getElementById('end');
+let idx = 0; // current page index in pages array (landing is 0)
+
+/* page helper */
+function showPage(i){
+  pages.forEach((p, ii)=> {
+    if(ii === i){
+      p.classList.add('active'); p.classList.remove('hidden'); p.removeAttribute('aria-hidden');
+    } else {
+      p.classList.remove('active'); p.classList.add('hidden'); p.setAttribute('aria-hidden','true');
+    }
+  });
+  idx = i;
+  // hide prev on landing
+  prevBtn.style.visibility = (i === 0 ? 'hidden' : 'visible');
+  // change next text to Finish on last content (before end) and to Restart on actual end if needed
+  if(i === pages.length-1) nextBtn.style.visibility = 'hidden';
+}
+
+/* initial show landing */
+showPage(0);
+
+/* Loader hides after 3 seconds then landing shows (makes a smooth entrance) */
+setTimeout(()=> {
+  document.getElementById('loading').classList.add('hidden');
+  // ensure landing visible (already is)
+}, 3000);
+
+/* Start button -> first story (index 1) */
+btnStart.addEventListener('click', ()=> {
+  if(pages.length > 1) showPage(1);
+});
+
+/* Prev / Next controls */
+nextBtn.addEventListener('click', ()=> {
+  // sprinkle burst where clicked
+  spawnSprinkles(event.clientX, event.clientY, 18);
+  if(idx < pages.length - 1) showPage(idx + 1);
+});
+prevBtn.addEventListener('click', ()=> {
+  spawnSprinkles(event.clientX, event.clientY, 8);
+  if(idx > 0) showPage(idx - 1);
+});
+btnRestart.addEventListener('click', ()=> showPage(1));
+
+/* keyboard navigation */
+document.addEventListener('keydown', (e)=> {
+  if(e.key === 'ArrowRight' || e.key === 'Enter') nextBtn.click();
+  if(e.key === 'ArrowLeft' || e.key === 'Backspace') prevBtn.click();
+});
+
+/* ---------- Sprinkles effect ---------- */
+function spawnSprinkles(x = window.innerWidth/2, y = window.innerHeight/2, count=12){
+  for(let i=0;i<count;i++){
+    const el = document.createElement('div');
+    el.className = 'sprinkle';
+    document.body.appendChild(el);
+    // randomize position and animation
+    const angle = (Math.random()*Math.PI*2);
+    const dist = 20 + Math.random()*90;
+    el.style.left = x + (Math.random()*20 - 10) + 'px';
+    el.style.top = y + (Math.random()*20 - 10) + 'px';
+    el.style.background = `radial-gradient(circle at 35% 30%, #fff, ${Math.random()>.5?'#8a63ff':'#ff6ad5'})`;
+    const dx = Math.cos(angle)*dist + (Math.random()*20-10);
+    const dy = Math.sin(angle)*dist - (30 + Math.random()*60);
+    el.animate([
+      { transform: 'translate(0,0) scale(1)', opacity:1 },
+      { transform: `translate(${dx}px, ${dy}px) scale(.6)`, opacity:0 }
+    ], { duration: 700 + Math.random()*400, easing: 'cubic-bezier(.2,.9,.25,1)'});
+    setTimeout(()=> el.remove(), 1200);
+  }
+}
+
+/* sprinkle on hover of Next (visual hint) */
+nextBtn.addEventListener('mouseenter', (ev)=> {
+  spawnSprinkles(ev.clientX, ev.clientY, 6);
+});
+
+/* ---------- Memory viewer ---------- */
+const gallery = [
+  'messenger.jpg','eid.jpg','arslan.jpg','parents.jpg','fav.jpg','prank.jpg','last_video.jpg'
+];
+let gi = 0;
+const viewer = document.getElementById('viewer');
+const viewerImg = document.getElementById('viewerImg');
+document.getElementById('openMemory').addEventListener('click', openViewer);
+function openViewer(start = 0){
+  gi = start || 0;
+  viewerImg.src = gallery[gi];
+  viewer.style.display = 'flex';
+  viewer.setAttribute('aria-hidden','false');
+}
+document.getElementById('vClose').addEventListener('click', ()=> {
+  viewer.style.display = 'none';
+  viewer.setAttribute('aria-hidden','true');
+});
+document.getElementById('vNext').addEventListener('click', ()=> {
+  gi = (gi+1) % gallery.length; viewerImg.src = gallery[gi];
+});
+document.getElementById('vPrev').addEventListener('click', ()=> {
+  gi = (gi-1+gallery.length) % gallery.length; viewerImg.src = gallery[gi];
+});
+
+/* allow clicking left/right viewer image areas (keyboard) */
+viewer.addEventListener('click', (e)=> {
+  // click background closes
+  if(e.target === viewer) viewer.style.display = 'none';
+});
+
+/* ---------- Background music ---------- */
+const audio = new Audio('love.mp3');
+audio.loop = true; audio.volume = 0.45;
+// many browsers require user gesture to start; we'll try after a delay
+setTimeout(()=> {
+  audio.play().catch(()=> {
+    // if autoplay blocked, wait for user interaction (start button)
+    window.addEventListener('click', ()=> audio.play().catch(()=>{}), {once:true});
+  });
+}, 2000);
+
+/* ---------- Make images open viewer on click (in case they want larger view) ---------- */
+document.querySelectorAll('.media').forEach((el, index)=>{
+  el.addEventListener('click', ()=>{
+    // find corresponding gallery index (message -> 0..6)
+    // mapping: m0 -> gallery[0], m1 -> gallery[1], ... video treated as last_video.jpg placeholder
+    const id = el.id; // m0..m6
+    if(id && id.startsWith('m')){
+      const n = parseInt(id.substring(1));
+      if(!Number.isNaN(n) && n >= 0 && n < gallery.length){
+        openViewer(n);
+      } else {
+        openViewer(0);
+      }
+    } else openViewer(0);
+  });
+});
+
+/* ensure prev hidden initially */
+prevBtn.style.visibility = 'hidden';
+
+/* Optional: allow touch swipe for mobile */
+let touchStartX = null;
+document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', e => {
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if(Math.abs(dx) > 40){
+    if(dx < 0) nextBtn.click(); else prevBtn.click();
+  }
+  touchStartX = null;
+});
+
+/* Accessibility: reduce motion handling */
+if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+  document.querySelectorAll('.media img, .media video').forEach(x=>x.style.transition='none');
+  document.querySelectorAll('.sprinkle').forEach(x=>x.remove());
+}
+</script>
+</body>
+</html>
